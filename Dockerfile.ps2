@@ -1,0 +1,23 @@
+# TinyGo for the PlayStation 2, ready to use: the ps2dev SDK and toolchain
+# (from the ps2dev image), Go, Python (for the demos' scripts) and this
+# fork's TinyGo from its release tarball.
+#
+#   docker run --rm -v "$PWD:/src" ghcr.io/rgsilva/tinygo-ps2:dev tinygo build -target ps2 -o out.elf .
+#
+# Built by the Linux workflow: the tarball is copied in from the build.
+FROM ps2dev/ps2dev:v2.0.0
+
+ARG GO_VERSION=1.27.1
+ARG TINYGO_TARBALL=tinygo-ps2.linux-amd64.tar.gz
+
+RUN apk add --no-cache bash ca-certificates git make python3 \
+ && wget -qO- "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+
+COPY ${TINYGO_TARBALL} /tmp/tinygo.tar.gz
+RUN tar -C /opt -xzf /tmp/tinygo.tar.gz && rm /tmp/tinygo.tar.gz
+
+ENV PATH="/opt/tinygo/bin:/usr/local/go/bin:${PATH}" \
+    PS2DEV=/usr/local/ps2dev \
+    GOPATH=/go \
+    GOFLAGS=-buildvcs=false
+WORKDIR /src
