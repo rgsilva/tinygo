@@ -4,16 +4,17 @@
 #
 #   docker run --rm -v "$PWD:/src" ghcr.io/rgsilva/tinygo-ps2:dev tinygo build -target ps2 -o out.elf .
 #
-# Built by the Linux workflow: the tarball is copied in from the build.
+# Built by the Linux workflow for amd64 and arm64: the tarball of the
+# platform being built (tinygo-ps2.linux-<arch>.tar.gz) is copied in.
 FROM ps2dev/ps2dev:v2.0.0
 
 ARG GO_VERSION=1.27.1
-ARG TINYGO_TARBALL=tinygo-ps2.linux-amd64.tar.gz
+ARG TARGETARCH
 
 RUN apk add --no-cache bash ca-certificates git make python3 \
- && wget -qO- "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+ && wget -qO- "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" | tar -C /usr/local -xz
 
-COPY ${TINYGO_TARBALL} /tmp/tinygo.tar.gz
+COPY tinygo-ps2.linux-${TARGETARCH}.tar.gz /tmp/tinygo.tar.gz
 RUN tar -C /opt -xzf /tmp/tinygo.tar.gz && rm /tmp/tinygo.tar.gz
 
 ENV PATH="/opt/tinygo/bin:/usr/local/go/bin:${PATH}" \
