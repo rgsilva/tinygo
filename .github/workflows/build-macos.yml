@@ -128,10 +128,11 @@ jobs:
       - name: Extract TinyGo version
         id: version
         run: ./.github/workflows/tinygo-extract-version.sh | tee -a "$GITHUB_OUTPUT"
+      # Uploaded with archive: false, so the artifact carries the file's name.
       - name: Download the macOS arm64 tarball
         uses: actions/download-artifact@v8
         with:
-          name: darwin-arm64-double-zipped-${{ steps.version.outputs.version }}
+          name: tinygo${{ steps.version.outputs.version }}.darwin-arm64.tar.gz
       - name: Publish
         env:
           VERSION: ${{ steps.version.outputs.version }}
