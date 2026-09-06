@@ -6,6 +6,10 @@ on:
     branches:
       - dev
       - release
+  # Weekly, so the LLVM build cache (evicted after 7 idle days) stays warm.
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -334,6 +338,37 @@ jobs:
       - run: make tinygo-test-baremetal
       - name: Check Go code formatting
         run: make fmt-check lint
+  # The rolling "dev-latest" pre-release: the tarball of the last dev build,
+  # under a fixed name, for the demos and anyone else (the ps2 target needs
+  # this fork's TinyGo and LLVM).
+  publish-dev:
+    name: Publish the dev release
+    needs: build-linux
+    if: github.ref == 'refs/heads/dev' && github.event_name != 'pull_request'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.build-linux.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Download the Linux tarball
+        uses: actions/download-artifact@v8
+        with:
+          name: tinygo${{ needs.build-linux.outputs.version }}.linux-amd64.tar.gz
+      - name: Publish
+        run: |
+          cp "tinygo${VERSION}.linux-amd64.tar.gz" tinygo-ps2.linux-amd64.tar.gz
+          printf 'version=%s\ncommit=%s\ndate=%s\n' "$VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > tinygo-ps2.linux-amd64.txt
+          git push --force origin "$GITHUB_SHA:refs/tags/dev-latest"
+          if ! gh release view dev-latest > /dev/null 2>&1; then
+            gh release create dev-latest --prerelease --title "Latest dev build" \
+              --notes "Rolling build of the dev branch (the PlayStation 2 target). Replaced on every push; see the .txt files for the commit."
+          fi
+          gh release upload dev-latest tinygo-ps2.linux-amd64.tar.gz tinygo-ps2.linux-amd64.txt --clobber
+
   build-linux-cross:
     # Build ARM Linux binaries, ready for release.
     # This intentionally uses an older Linux image, so that we compile against
